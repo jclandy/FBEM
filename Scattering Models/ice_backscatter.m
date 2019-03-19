@@ -36,6 +36,7 @@ theta = logspace(log10(1e-6),log10(pi/2),200);
 
 c = 299792458; % speed of light, m/s
 f_c = c/lambda; % radar frequency, Hz
+k = (2*pi)/lambda; % wavenumber
 
 % mss_exp_si = (sqrt(2/pi)*sigma_si/l_si*sqrt(5*k*l_si - atan(5*k*l_si)))^2; % mean-square slope for exponential ACF (Dierking, 2000)
 
@@ -75,7 +76,7 @@ else
     eta_0 = 376.73031346177; % intrinsic impedance of free space, ohms
     eta_1 = eta_0/sqrt(epsr_a);
     eta_2 = eta_0/sqrt(real(eps_si));
-    theta_2 = asin(sin(theta).*(sqrt(epsr_a/epsr_a))); % transmission angle
+    theta_2 = asin(sin(theta).*(sqrt(epsr_a/real(eps_si)))); % transmission angle
 end
 
 rho_H = (eta_2*cos(theta) - eta_1*cos(theta_2))./(eta_2*cos(theta) + eta_1*cos(theta_2)); % reflection coeff
@@ -87,19 +88,19 @@ tau_H = 1 + rho_H; % transmission coeff
 tau_V = (1 + rho_V)*(cos(theta)/cos(theta_2)); % transmission coeff
 tau_ice = spline(theta,(tau_H + tau_V)/2);
 
-% gamma_H = rho_H.^2; % reflectivity (intensity)
-% gamma_V = rho_V.^2; % reflectivity (intensity)
+gamma_H = rho_H.^2; % reflectivity (intensity)
+gamma_V = rho_V.^2; % reflectivity (intensity)
 
 
 %% Backscattering Coefficient of Snow-Ice Interface, sigma0
 
 % Calculate coherent vs. incoherent surface scattering ratio
-% psi = k*sigma_si*cos(theta); % frequency-dependent roughness parameter
-% omega = exp(-4*psi.^2); % fractional coherent component
+psi = k*sigma_si*cos(theta); % frequency-dependent roughness parameter
+omega = exp(-4*psi.^2); % fractional coherent component
 
 % Calculate coherent reflected backscattering coefficient
-% sigma_0_HH_coh = (gamma_H/beta_c^2)*exp(-4*k^2*sigma_si^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
-% sigma_0_VV_coh = (gamma_V/beta_c^2)*exp(-4*k^2*sigma_si^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
+sigma_0_HH_coh = ((gamma_H.*omega)/beta_c^2)*exp(-4*k^2*sigma_si^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
+sigma_0_VV_coh = ((gamma_V.*omega)/beta_c^2)*exp(-4*k^2*sigma_si^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
 
 % Calculate incoherent surface backscattering coefficient
 % Run single-scattering IEM for relevant range of facet incidence angles
@@ -111,10 +112,9 @@ end
 
 % Calculate total co-polarized surface backscattering cofficients,
 % including coherent reflected power
-% sigma_0_HH_si_surf = 10*log10(sigma_0_HH_coh + 10.^(sigma_0_HH_si_surf'/10)); % H-pol, dB
-% sigma_0_VV_si_surf = 10*log10(sigma_0_VV_coh + 10.^(sigma_0_VV_si_surf'/10)); % V-pol, dB
+sigma_0_HH_si_surf = 10*log10(sigma_0_HH_coh + 10.^(sigma_0_HH_si_surf'/10)); % H-pol, dB
+sigma_0_VV_si_surf = 10*log10(sigma_0_VV_coh + 10.^(sigma_0_VV_si_surf'/10)); % V-pol, dB
 
-% Assuming no coherent reflected power
 sigma_0_HH_si_surf(isinf(sigma_0_HH_si_surf))=NaN; sigma_0_VV_si_surf(isinf(sigma_0_VV_si_surf))=NaN;
 
 % Build spline interpolants (assumption that scattering is polarization-independent)
