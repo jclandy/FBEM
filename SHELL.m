@@ -40,7 +40,7 @@ rho_s = 350; % snow bulk density (default = 350 kg/m^3)
 r_s = 0.001; % snow grain size (normal range from 0.0001 to 0.004 m, default 1 mm)
 h_s = 0; % snow depth, m
 
-sigma_si = [0.002 0.004]; % sea ice rms height (default = 0.002 m)
+sigma_si = 0.002; % sea ice rms height (default = 0.002 m)
 l_si = 0.02; % sea ice correlation length (default = 0.02 m)
 T_si = -15; % sea ice bulk temperature (default = -15 C)
 S_si = 6; % sea ice bulk salinity (default = 6 ppt)
@@ -84,7 +84,7 @@ t_sub = 1;
 
 % Parameters of synthetic topography
 topo_type = 2; % type of surface: 1 = Gaussian, 2 = lognormal, 3 = fractal
-sigma_surf = [0.2 0.6]; % large-scale rms roughness height (default = 0.1 m)
+sigma_surf = 0.1; % large-scale rms roughness height (default = 0.1 m)
 l_surf = 5; % large-scale correlation length (default = 5 m)
 H_surf = 0.5; % Hurst parameter (default = 0.5)
 dx = 10; % resolution of grid, m (WARNING use dx>=10 for PL mode and dx>=5 for SAR mode)
