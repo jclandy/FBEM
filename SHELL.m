@@ -13,6 +13,7 @@
 % snow_backscatter.m
 % ice_backscatter.m
 % lead_backscatter.m
+% pond_backscatter.m
 
 % Uses the following codes from external sources:
 % computeNormalVectorTriangulation.m (David Gingras)
@@ -39,7 +40,7 @@ rho_s = 350; % snow bulk density (default = 350 kg/m^3)
 r_s = 0.001; % snow grain size (normal range from 0.0001 to 0.004 m, default 1 mm)
 h_s = 0; % snow depth, m
 
-sigma_si = 0.002; % sea ice rms height (default = 0.002 m)
+sigma_si = [0.002 0.004]; % sea ice rms height (default = 0.002 m)
 l_si = 0.02; % sea ice correlation length (default = 0.02 m)
 T_si = -15; % sea ice bulk temperature (default = -15 C)
 S_si = 6; % sea ice bulk salinity (default = 6 ppt)
@@ -70,7 +71,7 @@ end
 prf = 18182; % pulse-repetition frequency (default = 18182 Hz, e.g. Cryosat-2)
 bandwidth = 320*10^6; % antenna bandwidth (default = 320*10^6 Hz, e.g. Cryosat-2)
 G_0 = 42; % peak antenna gain, dB
-D_0 = [30.6 36.12]; % synthetic beam gain, 36.12 dB SAR mode (30.6 dB SARIn mode)
+D_0 = 36.12; % synthetic beam gain, 36.12 dB SAR mode (30.6 dB SARIn mode)
 
 % Number of range bins
 N_tb = 70; % (default = 70)
@@ -83,7 +84,7 @@ t_sub = 1;
 
 % Parameters of synthetic topography
 topo_type = 2; % type of surface: 1 = Gaussian, 2 = lognormal, 3 = fractal
-sigma_surf = 0.5; % large-scale rms roughness height (default = 0.1 m)
+sigma_surf = [0.2 0.6]; % large-scale rms roughness height (default = 0.1 m)
 l_surf = 5; % large-scale correlation length (default = 5 m)
 H_surf = 0.5; % Hurst parameter (default = 0.5)
 dx = 10; % resolution of grid, m (WARNING use dx>=10 for PL mode and dx>=5 for SAR mode)
@@ -117,7 +118,14 @@ epsilon_b = lambda/(2*N_b*v*(1/prf)); % angular resolution of beams from full lo
 % Identify vector variables
 PARAMETERS = whos('*');
 idS = find(cellfun(@(x) x(:,2),{PARAMETERS.size})>1);
+
 idG = find(cellfun(@(x) x(:,2),{GP.size})>1);
+nmG = zeros(length(idG),1);
+for i = 1:length(idG)
+    nmG = find(cellfun(@(x) strcmp(x,GP(idG(i)).name),{PARAMETERS.name}));
+end
+match = zeros(1,3);
+match(1:length(idS)) = nmG==idS;
 
 if isempty(idS)
     vec1 = 1;
@@ -151,8 +159,9 @@ for i = 1:length(vec1)
         
         for k = 1:length(vec3)
             
+            lN = {'i','j','k'};
             for l = 1:length(idS)
-                eval([PARAMETERS(idS(l)).name ' = vec' num2str(l) '(i);']);
+                eval([PARAMETERS(idS(l)).name ' = vec' num2str(l) '(' lN{l} ');']);
             end
             
             % Time domain
@@ -174,7 +183,7 @@ for i = 1:length(vec1)
             
             counter = counter + 1;
             
-            itN = 25; % Number of iterations
+            itN = 1; % Number of iterations
             P_t_full = zeros(length(t),N_b,itN);
             P_t_ml = zeros(length(t),itN);
             P_t_full_comp = zeros(length(t),N_b,4,itN);
@@ -187,7 +196,7 @@ for i = 1:length(vec1)
                 % Run Facet-Based Echo Model
                 [P_t_full(:,:,l),P_t_ml(:,l),P_t_full_comp(:,:,:,l),P_t_ml_comp(:,:,l)] = Facet_Echo_Model(op_mode,lambda,bandwidth,P_T,h,v,pitch,roll,prf,beam_weighting,G_0,D_0,N_b,t,PosT,surface_type,sigma_0_snow_surf,sigma_0_snow_vol,kappa_e,tau_snow,c_s,h_s,sigma_0_ice_surf,sigma_0_lead_surf,sigma_0_mp_surf);
                 
-                fprintf(['Iteration ' num2str(l) '/' num2str(itN) ', Simulation ' num2str(counter) '/' num2str(length(vec1)*length(vec2)*length(vec3)) '\n']);
+                fprintf(['Iteration ' num2str(l) '/' num2str(itN) ', Simulation ' num2str(sum(~cellfun(@isempty,P_t_ml_range(:)))+1) '/' num2str(length(vec1)*length(vec2)*length(vec3)) '\n']);
             
             end
             
@@ -202,10 +211,25 @@ for i = 1:length(vec1)
             else
             end
             
+            if match(3)>0
+                counter = 0;
+            else
+            end
+            
         end
-    
+        
+        if match(2)>0
+            counter = 0;
+        else
+        end
+        
     end
    
+    if match(1)>0
+        counter = 0;
+    else
+    end
+    
 end
 
 %% Save Results
@@ -231,4 +255,3 @@ end
 save('FEM_Simulations','t','P_t_full_range','P_t_ml_range','P_t_full_comp_range','P_t_ml_comp_range','-append');
 
 clear
-
