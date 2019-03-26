@@ -120,7 +120,7 @@ PARAMETERS = whos('*');
 idS = find(cellfun(@(x) x(:,2),{PARAMETERS.size})>1);
 
 idG = find(cellfun(@(x) x(:,2),{GP.size})>1);
-nmG = zeros(length(idG),1);
+nmG = zeros(max([1 length(idG)]),1);
 for i = 1:length(idG)
     nmG = find(cellfun(@(x) strcmp(x,GP(idG(i)).name),{PARAMETERS.name}));
 end
