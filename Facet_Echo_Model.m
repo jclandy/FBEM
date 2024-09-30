@@ -1,4 +1,4 @@
-function [P_t_full,P_t_ml,P_t_full_comp,P_t_ml_comp] = Facet_Echo_Model(op_mode,lambda,bandwidth,P_T,h,v,pitch,roll,prf,beam_weighting,G_0,D_0,N_b,t,PosT,surface_type,sigma_0_snow_surf,sigma_0_snow_vol,kappa_e,tau_snow,c_s,h_s,sigma_0_ice_surf,sigma_0_lead_surf,sigma_0_mp_surf)
+function [P_t_full,P_t_ml,P_t_full_comp,P_t_ml_comp] = Facet_Echo_Model(op_mode,lambda,bandwidth,P_T,h,v,pitch,roll,prf,beam_weighting,G_0,D_0,gamma1,gamma2,N_b,t,PosT,surface_type,sigma_0_snow_surf,sigma_0_snow_vol,kappa_e,tau_snow,c_s,h_s,sigma_0_ice_surf,sigma_0_lead_surf,sigma_0_mp_surf)
 
 %% Facet-based Radar Altimeter Echo Model for Sea Ice
 
@@ -19,6 +19,8 @@ function [P_t_full,P_t_ml,P_t_full_comp,P_t_ml_comp] = Facet_Echo_Model(op_mode,
 % beam_weighting = weighting function on beam pattern (1 = rectangular, 2 =
 % Hamming)
 % G_0 = peak antenna gain, dB
+% gamma1 = along-track antenna parameter, 0.0116 rads
+% gamma2 = across-track antenna parameter, 0.0129 rads
 % N_b = no. beams in synthetic aperture, 64 (1 in PL mode)
 % t = time, s
 % PosT = surface facet xyz locations (n x 3 matrix)
@@ -68,12 +70,6 @@ delta_x = v/prf; % distance between coherent pulses in synthetic aperture, m
 % A_pl = pi*(delta_x_pl/2)^2; % area of each range ring (after waveform peak), m
 
 epsilon_b = lambda/(2*N_b*v*(1/prf)); % angular resolution of beams from full look crescent (beam separation angle) 
-
-% Cryosat-2 antenna pattern terms
-gammabar = 0.012215368000378016; % antenna pattern term 1
-gammahat = 0.0381925958945466; % anetnna pattern term 2
-gamma1 = sqrt(2/(2/gammabar^2+2/gammahat^2));
-gamma2 = sqrt(2/(2/gammabar^2-2/gammahat^2));
 
 % Antenna look geometry
 m = -(N_b-1)/2:(N_b-1)/2;
@@ -149,7 +145,7 @@ parfor i = 1:length(m)
     
     %% Compute gain functions
     
-    % Antenna gain pattern
+    % Antenna gain pattern (based on Cryosat-2)
     G = G_0*exp(-THETA_G.^2.*(cos(PHI_G).^2/gamma1^2 + sin(PHI_G).^2/gamma2^2));
     
     % Synthetic beam gain function
@@ -170,13 +166,13 @@ parfor i = 1:length(m)
     theta_PR = bsxfun(@times, ones(size(P_t)), theta_pr);
     
     % Snow volume echo from IEM and Mie extinction
-    vu_t_surf = 10.^(ppval(sigma_0_snow_surf,theta_PR(T>=-(2*h_s)/c_s & T<0))/10);
-    vu_t_vol = dirac(T(T>=-(2*h_s)/c_s & T<0) + (2*h_s)/c_s) + 10.^(ppval(sigma_0_snow_vol,theta_PR(T>=-(2*h_s)/c_s & T<0))/10)*kappa_e.*exp(-c_s*kappa_e*(T(T>=-(2*h_s)/c_s & T<0) + (2*h_s)/c_s));
+    vu_t_surf = 10.^(ppval(sigma_0_snow_surf,theta_pr)/10)*(h_s~=0);
+    vu_t_vol = 10.^(ppval(sigma_0_snow_vol,theta_PR(T>=-(2*h_s)/c_s & T<0))/10)*kappa_e.*exp(-c_s*kappa_e*(T(T>=-(2*h_s)/c_s & T<0) + (2*h_s)/c_s));
     
-    vu_t_surf_tracer = zeros(size(P_t)); vu_t_surf_tracer(T>=-(2*h_s)/c_s & T<0) = vu_t_surf;
-    vu_t_surf_tracer = P_t.*vu_t_surf_tracer;
+    vu_t_surf_tracer = bsxfun(@times,interp1(t - 2*h_s/c_s,P_t',t,'linear')',vu_t_surf); % correct echo for snow depth
+    
     vu_t_vol_tracer = zeros(size(P_t)); vu_t_vol_tracer(T>=-(2*h_s)/c_s & T<0) = vu_t_vol;
-    vu_t_vol_tracer = P_t.*vu_t_vol_tracer;
+    vu_t_vol_tracer = interp1(t - 2*h_s/c_s,P_t',t,'linear')'.*vu_t_vol_tracer;
     
     % Ice surface from simple approx functions
 %     phi_pr = 1*(pi/180); % polar response angle for Giles et al., 2007 simplified surface scattering function

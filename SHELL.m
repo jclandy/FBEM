@@ -73,6 +73,11 @@ bandwidth = 320*10^6; % antenna bandwidth (default = 320*10^6 Hz, e.g. Cryosat-2
 G_0 = 42; % peak antenna gain, dB
 D_0 = 36.12; % synthetic beam gain, 36.12 dB SAR mode (30.6 dB SARIn mode)
 
+gammabar = 0.012215368000378016; % Cryosat-2 antenna pattern term 1
+gammahat = 0.0381925958945466; % Cryosat-2 antenna pattern term 2
+gamma1 = sqrt(2/(2/gammabar^2+2/gammahat^2)); % along-track antenna parameter
+gamma2 = sqrt(2/(2/gammabar^2-2/gammahat^2)); % across-track antenna parameter
+
 % Number of range bins
 N_tb = 70; % (default = 70)
 
@@ -194,7 +199,7 @@ for i = 1:length(vec1)
                 [PosT,surface_type] = synthetic_topo_shell(op_mode,topo_type,pitch,roll,sigma_surf,l_surf,H_surf,dx,L_w,L_h,D_off,f_p);
                 
                 % Run Facet-Based Echo Model
-                [P_t_full(:,:,l),P_t_ml(:,l),P_t_full_comp(:,:,:,l),P_t_ml_comp(:,:,l)] = Facet_Echo_Model(op_mode,lambda,bandwidth,P_T,h,v,pitch,roll,prf,beam_weighting,G_0,D_0,N_b,t,PosT,surface_type,sigma_0_snow_surf,sigma_0_snow_vol,kappa_e,tau_snow,c_s,h_s,sigma_0_ice_surf,sigma_0_lead_surf,sigma_0_mp_surf);
+                [P_t_full(:,:,l),P_t_ml(:,l),P_t_full_comp(:,:,:,l),P_t_ml_comp(:,:,l)] = Facet_Echo_Model(op_mode,lambda,bandwidth,P_T,h,v,pitch,roll,prf,beam_weighting,G_0,D_0,gamma1,gamma2,N_b,t,PosT,surface_type,sigma_0_snow_surf,sigma_0_snow_vol,kappa_e,tau_snow,c_s,h_s,sigma_0_ice_surf,sigma_0_lead_surf,sigma_0_mp_surf);
                 
                 fprintf(['Iteration ' num2str(l) '/' num2str(itN) ', Simulation ' num2str(sum(~cellfun(@isempty,P_t_ml_range(:)))+1) '/' num2str(length(vec1)*length(vec2)*length(vec3)) '\n']);
             
@@ -255,3 +260,4 @@ end
 save('FEM_Simulations','t','P_t_full_range','P_t_ml_range','P_t_full_comp_range','P_t_ml_comp_range','-append');
 
 clear
+

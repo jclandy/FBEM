@@ -42,6 +42,7 @@ theta = logspace(log10(1e-6),log10(pi/2),200);
 
 c = 299792458; % speed of light, m/s
 f_c = c/lambda; % radar frequency, Hz
+k0 = (2*pi)/lambda; % wavenumber
 
 % mss_exp_s = (sqrt(2/pi)*sigma_s/l_s*sqrt(5*k*l_s - atan(5*k*l_s)))^2; % mean-square slope for exponential ACF (Dierking, 2000)
 
@@ -77,12 +78,14 @@ tau_snow = spline(theta,(tau_H + tau_V)/2);
 %% Backscattering Coefficient of Air-Snow Interface, sigma0
 
 % Calculate coherent vs. incoherent surface scattering ratio
-% psi = k*sigma_s*cos(theta); % frequency-dependent roughness parameter
+% psi = k0*sigma_s*cos(theta); % frequency-dependent roughness parameter
 % omega = exp(-4*psi.^2); % fractional coherent component
 
 % Calculate coherent reflected backscattering coefficient
-% sigma_0_HH_coh = (gamma_H/beta_c^2)*exp(-4*k^2*sigma_s^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
-% sigma_0_VV_coh = (gamma_V/beta_c^2)*exp(-4*k^2*sigma_s^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
+% sigma_0_HH_coh = ((gamma_H.*omega)/beta_c^2)*exp(-4*k0^2*sigma_s^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
+% sigma_0_VV_coh = ((gamma_V.*omega)/beta_c^2)*exp(-4*k0^2*sigma_s^2).*exp(-theta.^2/beta_c^2); % coherent component of backscattering coefficient
+sigma_0_HH_coh = 4*((gamma_H.*1)/beta_c^2)*exp(-4*k0^2*sigma_s^2).*exp(-4*theta.^2/beta_c^2); % equation 6 of Fung and Eom 1983
+sigma_0_VV_coh = 4*((gamma_V.*1)/beta_c^2)*exp(-4*k0^2*sigma_s^2).*exp(-4*theta.^2/beta_c^2);
 
 % Calculate incoherent surface backscattering coefficient
 % Run single-scattering IEM for relevant range of facet incidence angles
@@ -94,8 +97,8 @@ end
 
 % Calculate total co-polarized surface backscattering cofficients,
 % including coherent reflected power
-% sigma_0_HH_s_surf = 10*log10(sigma_0_HH_coh + 10.^(sigma_0_HH_s_surf'/10)); % H-pol, dB
-% sigma_0_VV_s_surf = 10*log10(sigma_0_VV_coh + 10.^(sigma_0_VV_s_surf'/10)); % V-pol, dB
+sigma_0_HH_s_surf = 10*log10(sigma_0_HH_coh + 10.^(sigma_0_HH_s_surf'/10)); % H-pol, dB
+sigma_0_VV_s_surf = 10*log10(sigma_0_VV_coh + 10.^(sigma_0_VV_s_surf'/10)); % V-pol, dB
 
 % Assuming no coherent reflected power
 sigma_0_HH_s_surf(isinf(sigma_0_HH_s_surf))=NaN; sigma_0_VV_s_surf(isinf(sigma_0_VV_s_surf))=NaN;
