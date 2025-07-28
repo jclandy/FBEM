@@ -27,47 +27,33 @@ x = linspace(-rL/2,rL/2,N); y = linspace(-rW/2,rW/2,M);
 [X,Y] = meshgrid(x,y);
 
 if LN == 0
-    h2 = h;
+    mu_norm = 0;
+    sigma_norm = h;
 else
-    h2 = 1;
+    % calculate required normal parameters, mean = 1
+    mu_norm = log(1^2/sqrt(h^2 + 1^2));
+    sigma_norm = sqrt(log(h^2/1^2 + 1));
 end
 
-Z = h2.*randn(M,N); % uncorrelated Gaussian random rough surface distribution
-                                % with rms height h
+Z = sigma_norm.*randn(M,N) + mu_norm; % uncorrelated Gaussian random rough surface distribution                         % with rms height h
                                 
 dx = rL / (N-1);
-%ro = sqrt( X.^2+Y.^2 );
-
-% Gaussian correlation function
-%    C = exp( -ro.^2 / L ^2 );  % Gaussian correlation function
- %   F = 2*dx/(L*sqrt(pi)) * exp( - 2 * ro.^2 / L ^2 );   % precalculated filtering function for Gaussian correlation function
 
 % Exponential correlation function
-%L = Lx;
-
-C = exp( - sqrt( (X / Lx).^2 + (Y / Ly).^2 ) );   % Exponential correlation function
-
-%        C = exp( - ro / L );   % Exponential correlation function
-
-%F =  dx / ( sqrt(2*pi) * L * gamma(0.75) ) * ( ( ro / (2*L) )  .^ ( -0.25 ) )  .* besselk( -0.25 , ro / L );                    % precalculated filtering function for Exponential correlation function
-
+C = exp( - sqrt( (X / Lx).^2 + (Y / Ly).^2 ) );  
 fft2_F = sqrt( fft2( C ) );
 
 % correlation of surface including convolution (faltung), inverse
 % Fourier transform and normalizing prefactors
 fft2_Z = fft2(Z);
-%f = 2*rL/N/clx*ifft2(fft2(Z).*fft2(F));
 f = real(ifft2( fft2_Z.*fft2_F));     %using our method
-%f2 = ifft2( fft2_Z.*fft2(F) );    % using analytically precalculated Filtering function
+
+% scale to original parameter values
+f = f*sigma_norm/std(f(:));
+f = f - (mean(f(:)) - mu_norm);
 
 if LN == 1
-    mu = log(1/sqrt(1 + h2^2/1^2));
-    var = log(1 + h2^2/1^2);
-
-    f = exp(mu + sqrt(var)*f);
-    f = f*h*(1/std2(f));
-    f = f - mean2(f);
-
+    f = exp(f) - 1;
 else
 end
     
