@@ -29,11 +29,11 @@ warning('off','all')
 
 % (Can be modified but these are default grid sizes)
 if op_mode == 1
-    L = 8000; % across-track diameter of grid, m
-    W = 8000; % along-track diameter of grid, m
+    L = 12000; % across-track diameter of grid, m
+    W = 12000; % along-track diameter of grid, m
 else
-    L = 8000; % across-track diameter of grid, m
-    W = 400; % along-track diameter of grid, m
+    L = 12000; % across-track diameter of grid, m
+    W = 1200; % along-track diameter of grid, m
 end
 
 [x,y] = meshgrid(-W/2+dx/2:dx:W/2-dx/2,-L/2+dx/2:dx:L/2-dx/2);
