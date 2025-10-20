@@ -61,7 +61,7 @@ c = 299792458; % speed of light, m/s
 Re = 6371*10^3; % earth's radius, m
 
 % f_c = c/lambda; % radar frequency, Hz
-k = (2*pi)/lambda; % wavenumber
+k0 = (2*pi)/lambda; % wavenumber
 
 delta_x = v/prf; % distance between coherent pulses in synthetic aperture, m
 
@@ -91,6 +91,7 @@ SURFACE_TYPE = surface_type(TRI(:,1));
 
 % Compute normal vectors of facets
 [NormalVx, NormalVy, NormalVz, PosVx, PosVy, PosVz]=computeNormalVectorTriangulation(PosT,TRI,'center-cells');
+% PosVz = PosVz*(std(PosT(:,3)/std(PosVz))); % to scale height distribution correctly?
 
 % Compute areas of facets
 P0 = PosT(TRI(:,1),:);
@@ -105,25 +106,23 @@ A_facets = sqrt(sum(V.*V, 2))/2;
 
 clear P0 P1 P2 P10 P20 V
 
-% Construct beam weighting function for azimuth FFT
-if op_mode==1 || beam_weighting == 1
-    H = ones(1,N_b);
-elseif op_mode==2 && beam_weighting == 2    
-    H = hamming(N_b);
-end
+% Alternative
+% [NormalVx, NormalVy, NormalVz, PosVx, PosVy, PosVz]=computeNormalVectorTriangulation(PosT,TRI,'vertices');
+% dx = 10;
+% A_facets = ones(size(PosVz))*dx^2;
 
 %% Radar Simulator Loop
 % Formulated for parallel processing
 
 P_t_full = zeros(length(m),length(t));
 sigma_0_tracer = zeros(length(m),length(t),4);
-parfor i = 1:length(m)
-    % disp(i);
+parfor ii = 1:length(m)
+    % disp(ii);
     
     %% Angular geometry of surface
     
     % Antenna location
-    x_0 = h*m(i)*epsilon_b + h*tan(pitch);
+    x_0 = h*m(ii)*epsilon_b + h*tan(pitch);
     y_0 = h*tan(roll);
     
     % Calculate basic angles
@@ -149,8 +148,16 @@ parfor i = 1:length(m)
     G = G_0*exp(-THETA_G.^2.*(cos(PHI_G).^2/gamma1^2 + sin(PHI_G).^2/gamma2^2));
     
     % Synthetic beam gain function
-    P_m = D_0*sin(N_b*(k*delta_x*sin(theta_l+m(i)*epsilon_b))).^2./(N_b*sin(k*delta_x*sin(theta_l+m(i)*epsilon_b))).^2; 
-    
+    P_m = [];
+    if beam_weighting == 1
+        % Rectangular
+        P_m = D_0*sin(N_b*(k0*delta_x*sin(theta_l+m(ii)*epsilon_b))).^2./(N_b*sin(k0*delta_x*sin(theta_l+m(ii)*epsilon_b))).^2; 
+    elseif beam_weighting == 2
+        % Apply hamming window to azimuthal response function
+        n = 0:(N_b-1);
+        P_m = abs(sum((0.54 - 0.46*cos((2*pi*n)/(N_b - 1))) .* exp(2*1j*k0*v/prf*(theta_l+m(ii)*epsilon_b).*(n - (N_b-1)/2)),2).^2);
+    end
+
     %% Compute transmitted power envelope
     
     % Time offset
@@ -178,7 +185,7 @@ parfor i = 1:length(m)
 %     phi_pr = 1*(pi/180); % polar response angle for Giles et al., 2007 simplified surface scattering function
 %     mu_t = zeros(size(theta_pr));
 %     mu_t(SURFACE_TYPE==1) = exp(-(theta_pr(SURFACE_TYPE==1)/phi_pr).^2); % Giles et al 2007 function
-%     alpha = (l_si/(2*k*sigma_si^2))^2;
+%     alpha = (l_si/(2*k0*sigma_si^2))^2;
 %     mu_t(SURFACE_TYPE==1) = -(rho_i_0*alpha)/2*(1 + alpha*sin(theta_pr(SURFACE_TYPE==1)).^2).^(-3/2); % Kurtz et al 2014 function
     
     % Ice surface echo from IEM
@@ -198,7 +205,7 @@ parfor i = 1:length(m)
     sigma_0_P_t = vu_t_surf_tracer + vu_t_vol_tracer + mu_t_si_tracer + mu_t_ocean_tracer;
     
     % Backscatter component fraction tracer
-    sigma_0_tracer(i,:,:) = [sum(vu_t_surf_tracer,1)./sum(sigma_0_P_t,1);sum(vu_t_vol_tracer,1)./sum(sigma_0_P_t,1);sum(mu_t_si_tracer,1)./sum(sigma_0_P_t,1);sum(mu_t_ocean_tracer,1)./sum(sigma_0_P_t,1)]';
+    sigma_0_tracer(ii,:,:) = [sum(vu_t_surf_tracer,1)./sum(sigma_0_P_t,1);sum(vu_t_vol_tracer,1)./sum(sigma_0_P_t,1);sum(mu_t_si_tracer,1)./sum(sigma_0_P_t,1);sum(mu_t_ocean_tracer,1)./sum(sigma_0_P_t,1)]';
     
     vu_t_surf_tracer = []; vu_t_vol_tracer = []; mu_t = []; mu_t_si_tracer = []; mu_t_ocean_tracer = [];
     
@@ -210,10 +217,10 @@ parfor i = 1:length(m)
     echo_t = nansum(P_r,1);
     
     % Keeps memory use low during loop
-    T = []; P_t = []; P_r = []; theta_PR = []; sigma_0_P_t = [];
+    T = []; P_t = []; P_r = []; P_m = []; theta_PR = []; sigma_0_P_t = [];
     
     % Apply weighting to single-look echo stack
-    P_t_full(i,:) = real(echo_t)*H(i);
+    P_t_full(ii,:) = real(echo_t);
         
 end
 
