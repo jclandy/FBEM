@@ -91,7 +91,7 @@ SURFACE_TYPE = surface_type(TRI(:,1));
 
 % Compute normal vectors of facets
 [NormalVx, NormalVy, NormalVz, PosVx, PosVy, PosVz]=computeNormalVectorTriangulation(PosT,TRI,'center-cells');
-% PosVz = PosVz*(std(PosT(:,3)/std(PosVz))); % to scale height distribution correctly?
+PosVz = PosVz*(std(PosT(:,3)/std(PosVz))); % scale height distribution correctly
 
 % Compute areas of facets
 P0 = PosT(TRI(:,1),:);

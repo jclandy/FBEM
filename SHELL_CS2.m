@@ -170,7 +170,7 @@ for i = 1:length(vec1)
             end
             
             % Time domain
-            t = (0.5/bandwidth)*((1:(1/t_sub):N_tb) - t_0);
+            t = (1/bandwidth)*((1:(1/t_sub):N_tb) - t_0);
             
             if counter<1 || ~isempty(idG) % skip if scattering properties do not change between runs
             
