@@ -71,8 +71,8 @@ tau_H = 1 + rho_H; % transmission coeff, H-pol
 tau_V = (1 + rho_V)*(cos(theta)/cos(theta_2)); % transmission coeff, V-pol
 tau_snow = spline(theta,(tau_H + tau_V)/2);
 
-% gamma_H = rho_H.^2; % reflectivity (intensity)
-% gamma_V = rho_V.^2; % reflectivity (intensity)
+gamma_H = rho_H.^2; % reflectivity (intensity)
+gamma_V = rho_V.^2; % reflectivity (intensity)
 
 
 %% Backscattering Coefficient of Air-Snow Interface, sigma0
